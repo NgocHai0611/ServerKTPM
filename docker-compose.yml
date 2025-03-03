@@ -1,0 +1,24 @@
+services:
+  gateway:
+    build:
+      dockerfile: DockerFile
+      context: ./gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - itemservice
+      - orderservice
+
+  itemservice:
+    build:
+      dockerfile: DockerFile
+      context: ./itemservice
+    ports:
+      - "3001:3001"
+
+  orderservice:
+    build:
+      dockerfile: DockerFile
+      context: ./orderservice
+    ports:
+      - "3002:3002"
