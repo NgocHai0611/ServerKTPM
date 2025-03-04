@@ -34,6 +34,53 @@ app.get("/listProduct", async (req, res) => {
   }
 });
 
+// Thêm sản phẩm
+app.post("/addProduct", async (req, res) => {
+  try {
+    const { idProduct, productName, unitPrice, imgProduct, desc, size } = req.body;
+    const newProduct = await prisma.products.create({
+      data: { idProduct, productName, unitPrice, imgProduct, desc, size },
+    });
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error("Error adding product:", error);
+    res.status(500).json({ error: "Error adding product" });
+  }
+});
+
+// Xóa sản phẩm theo ID
+app.delete("/deleteProduct/:idProduct", async (req, res) => {
+  try {
+    const { idProduct } = req.params;
+    await prisma.products.deleteMany({ where: { idProduct } });
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ error: "Error deleting product" });
+  }
+});
+
+// Cập nhật sản phẩm theo idProduct
+app.put("/updateProduct/:idProduct", async (req, res) => {
+  try {
+    const { idProduct } = req.params;
+    const { productName, unitPrice, imgProduct, desc, size } = req.body;
+    const updatedProduct = await prisma.products.updateMany({
+      where: { idProduct },
+      data: { productName, unitPrice, imgProduct, desc, size },
+    });
+
+    if (updatedProduct.count === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({ message: "Product updated successfully" });
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ error: "Error updating product" });
+  }
+});
+
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
