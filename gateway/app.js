@@ -4,7 +4,9 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const proxy = require("express-http-proxy");
+const proxyMiddleware = require("express-http-proxy");
 const cors = require("cors");
+require("dotenv").config();
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
@@ -23,9 +25,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+app.use("/", indexRouter);
+
 app.use("/auth", proxy("http://localhost:3000"));
-app.use("/products", proxy("http://itemservice:3001"));
-app.use("/orders", proxy("http://orderservice:3002"));
+app.use("/products", proxy(process.env.PRODUCTION_ITEM_SERVICE));
+app.use("/orders", proxy(process.env.PRODUCTION_ORDER_SERVICE));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
