@@ -37,7 +37,8 @@ app.get("/listProduct", async (req, res) => {
 // Thêm sản phẩm
 app.post("/addProduct", async (req, res) => {
   try {
-    const { idProduct, productName, unitPrice, imgProduct, desc, size } = req.body;
+    const { idProduct, productName, imgProduct, desc, size } = req.body;
+    const unitPrice = parseFloat(req.body.unitPrice);
     const newProduct = await prisma.products.create({
       data: { idProduct, productName, unitPrice, imgProduct, desc, size },
     });
