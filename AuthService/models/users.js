@@ -3,7 +3,13 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
-  username: {
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+  },
+  email: { // Thêm trường email
     type: String,
     required: true,
     unique: true,
@@ -13,14 +19,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  tokens: [
-    {
-      token: {
-        type: String,
-        required: true,
-      },
-    },
-  ],
+  pic: { type: String, default: "default_profile_url" },
+  isAdmin: { type: Boolean, default: false }
 });
 
 userSchema.methods.verifyPassword = async function (password) {
@@ -29,6 +29,6 @@ userSchema.methods.verifyPassword = async function (password) {
   return isMatch;
 };
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema, "Users"); 
 
 module.exports = User;
