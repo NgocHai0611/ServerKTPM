@@ -1,5 +1,13 @@
-version: "3"
 services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway
+
   gateway:
     build:
       dockerfile: DockerFile
@@ -9,6 +17,7 @@ services:
     depends_on:
       - itemservice
       - orderservice
+      - paymentservice
 
   itemservice:
     build:
@@ -23,3 +32,10 @@ services:
       context: ./orderservice
     ports:
       - "3002:3002"
+
+  paymentservice:
+    build:
+      dockerfile: DockerFile
+      context: ./paymentservice
+    ports:
+      - "3003:3003"

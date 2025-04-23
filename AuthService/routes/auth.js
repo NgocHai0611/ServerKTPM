@@ -6,6 +6,24 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 
 // Login route
+// router.post("/login", async (req, res) => {
+//   const { username, password } = req.body;
+//   console.log(username, password);
+
+//   const user = await User.findOne({ username });
+
+//   if (!user) return res.status(400).send("Invalid username or password.");
+
+//   const validPassword = await bcrypt.compare(password, user.password);
+
+//   if (!validPassword)
+//     return res.status(400).send("Invalid username or password.");
+
+//   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+
+//   res.send({ token });
+// });
+
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   console.log(username, password);
@@ -19,9 +37,7 @@ router.post("/login", async (req, res) => {
   if (!validPassword)
     return res.status(400).send("Invalid username or password.");
 
-  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
-
-  res.send({ token });
+  res.json({ user });
 });
 
 // Register route

@@ -26,10 +26,10 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
-
-app.use("/auth", proxy("http://localhost:3000"));
-app.use("/products", proxy(process.env.PRODUCTION_ITEM_SERVICE));
-app.use("/orders", proxy(process.env.PRODUCTION_ORDER_SERVICE));
+// app.use("/auth", proxy("http://localhost:3000"));
+app.use("/products", proxy(process.env.LOCAL_ITEM_SERVICE));
+app.use("/orders", proxy(process.env.LOCAL_ORDER_SERVICE));
+app.use("/payments", proxy(process.env.LOCAL_PAYMENT_SERVICE));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

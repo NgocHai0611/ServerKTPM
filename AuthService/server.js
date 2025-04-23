@@ -6,7 +6,7 @@ const cors = require("cors"); // Import the CORS middleware
 require("dotenv").config();
 
 const app = express();
-const PORT = 3001;
+const PORT = 3004;
 
 mongoose
   .connect(process.env.MONGODB_URI, {

@@ -23,6 +23,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+// app.use("/", indexRouter);
+
 // Lấy tất cả sản phẩm
 app.get("/listProduct", async (req, res) => {
   try {
@@ -37,7 +39,8 @@ app.get("/listProduct", async (req, res) => {
 // Thêm sản phẩm
 app.post("/addProduct", async (req, res) => {
   try {
-    const { idProduct, productName, unitPrice, imgProduct, desc, size } = req.body;
+    const { idProduct, productName, unitPrice, imgProduct, desc, size } =
+      req.body;
     const newProduct = await prisma.products.create({
       data: { idProduct, productName, unitPrice, imgProduct, desc, size },
     });
