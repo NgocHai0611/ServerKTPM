@@ -43,44 +43,35 @@ app.get("/listPayment", (req, res) => {
   res.json("Payment Service");
 });
 
-app.post("/create-payment-link", async (req, res) => {
-  const YOUR_DOMAIN = "http://localhost:5173/paymentProccess";
-  const body = {
-    orderCode: Number(String(Date.now()).slice(-6)),
-    amount: 2000,
-    description: "Thanh toan don hang",
-    items: [
-      {
-        name: "Mì tôm Hảo Hảo ly",
-        quantity: 1,
-        price: 10000,
-      },
-    ],
-    returnUrl: "http://localhost:5173/paymentSuccess",
-    cancelUrl: "http://localhost:5173/paymentFail",
-  };
+// app.post("/create-payment-link", async (req, res) => {
+//   const YOUR_DOMAIN = "http://localhost:5173/paymentProccess";
+//   const body = {
+//     orderCode: Number(String(Date.now()).slice(-6)),
+//     amount: 2000,
+//     description: "Thanh toan don hang",
+//     items: [
+//       {
+//         name: "Mì tôm Hảo Hảo ly",
+//         quantity: 1,
+//         price: 10000,
+//       },
+//     ],
+//     returnUrl: "http://localhost:5173/paymentSuccess",
+//     cancelUrl: "http://localhost:5173/paymentFail",
+//   };
 
-  try {
-    const paymentLinkResponse = await payOS.createPaymentLink(body);
+//   try {
+//     const paymentLinkResponse = await payOS.createPaymentLink(body);
 
-    res.send(paymentLinkResponse);
-  } catch (error) {
-    console.error(error);
-    res.send("Something went error");
-  }
-});
+//     res.send(paymentLinkResponse);
+//   } catch (error) {
+//     console.error(error);
+//     res.send("Something went error");
+//   }
+// });
 
-app.get("/check-payment-status/:orderCode", async (req, res) => {
-  const { orderCode } = req.params;
 
-  try {
-    const result = await payOS.getPaymentLinkInformation(Number(orderCode));
-    res.json(result); // Trả về thông tin đơn hàng gồm status
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Lỗi khi kiểm tra trạng thái thanh toán");
-  }
-});
+//  
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
