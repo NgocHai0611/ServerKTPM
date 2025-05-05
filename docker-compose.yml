@@ -32,6 +32,8 @@ services:
       context: ./orderservice
     ports:
       - "3002:3002"
+    depends_on:
+      - rabbitmq
 
   paymentservice:
     build:
@@ -39,3 +41,20 @@ services:
       context: ./paymentservice
     ports:
       - "3003:3003"
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq_data:

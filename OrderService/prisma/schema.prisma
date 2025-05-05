@@ -20,6 +20,8 @@ model orders {
   customerID String
   total Float
   discount String
+  status String
+  orderDetails orderDetails[]  // Quan hệ 1-n
 }
 
 model orderDetails {
@@ -29,6 +31,7 @@ model orderDetails {
   unitPrice Float
   productID String
   nameProduct String
+  orders orders @relation(fields: [orderID], references: [orderID])
 }
 
 
