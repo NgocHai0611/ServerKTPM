@@ -18,6 +18,7 @@ model products {
   id       String @id @default(auto()) @map("_id") @db.ObjectId
   idProduct String
   productName String
+  qtyStock Int 
   unitPrice Float
   imgProduct String
   desc     String

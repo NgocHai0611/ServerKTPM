@@ -47,7 +47,7 @@ app.get("/listOrderDetail", async (req, res) => {
 
 app.post("/saveOrder", async (req, res) => {
   try {
-    const { cartItems, userID, grandTotal } = req.body;
+    const { cartItems, userID, grandTotal, status } = req.body;
     console.log("Customer ID : ", userID);
     console.log("Product In Cart:  ", cartItems);
 
@@ -58,7 +58,7 @@ app.post("/saveOrder", async (req, res) => {
         customerID: userID,
         total: grandTotal,
         discount: "0%",
-        status: "Pending",
+        status: status,
       },
     });
 
@@ -83,6 +83,50 @@ app.post("/saveOrder", async (req, res) => {
   } catch (error) {
     console.error("Error adding orders :", error);
     res.status(500).json({ error: "Error adding order" });
+  }
+});
+
+app.post("/updateOrder", async (req, res) => {
+  const { orders, status, items, userID, grandTotal } = req.body;
+
+  try {
+    // 1. Cập nhật status và grandTotal cho đơn hàng
+    await prisma.orders.update({
+      where: {
+        orderID: orders.orderID,
+      },
+      data: {
+        status: status,
+        total: grandTotal,
+      },
+    });
+
+    // 2. Xóa tất cả các orderDetails liên quan đến order
+    await prisma.orderDetails.deleteMany({
+      where: {
+        orderID: orders.orderID,
+      },
+    });
+
+    // 3. Thêm các orderDetails mới từ danh sách items
+    const newItems = items.map((item) => ({
+      idOrderDetails: undefined,
+      orderID: orders.orderID,
+      productID: item.idProduct,
+      productName: item.productName || item.nameProduct || item.name,
+      qty: item.qty || item.quantity,
+      unitPrice: item.unitPrice || item.price,
+      imgProduct: item.imgProduct,
+    }));
+
+    await prisma.orderDetails.createMany({
+      data: newItems,
+    });
+
+    res.status(200).json({ message: "Order updated successfully." });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    res.status(500).json({ error: "Failed to update order." });
   }
 });
 
@@ -155,6 +199,25 @@ app.get("/spending/byYear/:customerID", async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error("Error calculating spending:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/:customerID", async (req, res) => {
+  const { customerID } = req.params;
+
+  try {
+    const orders = await prisma.orders.findMany({
+      where: { customerID },
+      orderBy: { orderDate: "desc" },
+      include: {
+        orderDetails: true, // Bao gồm chi tiết đơn hàng
+      },
+    });
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching orders with details:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
