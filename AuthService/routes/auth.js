@@ -39,8 +39,8 @@ router.post("/login", async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin,
         name: user.name,
-        pic: user.pic
-      }
+        pic: user.pic,
+      },
     });
   } catch (err) {
     console.error("💥 Error during login:", err);
@@ -99,6 +99,34 @@ router.post("/register", async (req, res) => {
   } catch (err) {
     console.error("Error during registration:", err);
     res.status(500).send({ error: "Internal server error." });
+  }
+});
+
+// Lấy Thông Tin User Của Tất Cả User Trừ Mật Khẩu
+router.get("/getAllUser", async (req, res) => {
+  try {
+    const users = await User.find({}, "-password"); // exclude password
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/grant-admin/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isAdmin: true },
+      { new: true } // trả về user sau khi update
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
   }
 });
 
