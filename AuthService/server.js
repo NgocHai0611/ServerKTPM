@@ -22,6 +22,7 @@ mongoose
 
 app.use(cors()); // Use CORS middleware to allow requests from the frontend
 app.use(express.json());
+
 app.use("/api/auth", authRoutes); // All the routes defined in auth.js will be prefixed with /api/auth
 
 app.listen(PORT, () => {

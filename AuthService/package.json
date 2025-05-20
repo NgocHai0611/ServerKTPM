@@ -12,10 +12,12 @@
     "debug": "~2.6.9",
     "dotenv": "^16.4.7",
     "express": "~4.16.1",
+    "express-rate-limit": "^7.5.0",
     "http-errors": "~1.6.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.0",
     "morgan": "~1.9.1",
+    "p-retry": "^6.2.1",
     "pug": "2.0.0-beta11"
   }
 }

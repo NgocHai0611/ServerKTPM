@@ -9,6 +9,12 @@ const { PrismaClient } = require("@prisma/client");
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 const prisma = new PrismaClient();
+let pRetry;
+
+(async () => {
+  const module = await import("p-retry");
+  pRetry = module.default;
+})();
 
 var app = express();
 

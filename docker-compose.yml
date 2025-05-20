@@ -44,6 +44,15 @@ services:
     depends_on:
       - rabbitmq
 
+  cartservice:
+    build:
+      dockerfile: DockerFile
+      context: ./CartService
+    ports:
+      - "3005:3005"
+    depends_on:
+      - rabbitmq
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
@@ -55,6 +64,16 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
 
 volumes:
   rabbitmq_data:
+  jenkins_home:
