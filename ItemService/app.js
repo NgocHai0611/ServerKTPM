@@ -4,8 +4,8 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 const cors = require("cors");
-
 const { PrismaClient } = require("@prisma/client");
+
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 const prisma = new PrismaClient();
@@ -16,10 +16,13 @@ let pRetry;
   pRetry = module.default;
 })();
 
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+require("dotenv").config();
+
 var app = express();
 
 app.use(cors());
-// view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
@@ -29,7 +32,17 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// app.use("/", indexRouter);
+// Cấu hình Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dioycsndv",
+  api_key: process.env.CLOUDINARY_API_KEY || "386921452882728",
+  api_secret:
+    process.env.CLOUDINARY_API_SECRET || "dRrvRJBEIJux55tAGjOYrJ4n_KY",
+});
+
+// Cấu hình Multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Lấy tất cả sản phẩm
 app.get("/listProduct", async (req, res) => {
@@ -37,23 +50,21 @@ app.get("/listProduct", async (req, res) => {
     const listItem = await prisma.products.findMany();
     res.json(listItem);
   } catch (error) {
-    console.error("Error fetching movies:", error);
-    res.status(500).send("Error fetching movies");
+    console.error("Error fetching products:", error);
+    res.status(500).send("Error fetching products");
   }
 });
 
+// Lấy sản phẩm theo idProduct
 app.get("/product/:idProduct", async (req, res) => {
   try {
     const { idProduct } = req.params;
-
     const product = await prisma.products.findFirst({
       where: { idProduct },
     });
-
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
-
     res.json(product);
   } catch (error) {
     console.error("Error fetching product:", error);
@@ -62,13 +73,58 @@ app.get("/product/:idProduct", async (req, res) => {
 });
 
 // Thêm sản phẩm
-app.post("/addProduct", async (req, res) => {
+app.post("/addProduct", upload.single("imgProduct"), async (req, res) => {
   try {
-    const { idProduct, productName, unitPrice, imgProduct, desc, size } =
+    const { idProduct, productName, unitPrice, desc, size, qtyStock } =
       req.body;
-    const newProduct = await prisma.products.create({
-      data: { idProduct, productName, unitPrice, imgProduct, desc, size },
+
+    // Kiểm tra dữ liệu đầu vào
+    if (
+      !idProduct ||
+      !productName ||
+      !unitPrice ||
+      !desc ||
+      !size ||
+      !qtyStock
+    ) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Kiểm tra idProduct đã tồn tại
+    const existingProduct = await prisma.products.findFirst({
+      where: { idProduct },
     });
+    if (existingProduct) {
+      return res.status(400).json({ error: "Product ID already exists" });
+    }
+
+    let imgProductUrl =
+      "https://res.cloudinary.com/demo/image/upload/default.jpg";
+    if (req.file) {
+      const base64Image = req.file.buffer.toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+
+      const uploadResult = await cloudinary.uploader.upload(dataURI, {
+        folder: "products",
+        public_id: `product_${idProduct}`,
+        overwrite: true,
+      });
+
+      imgProductUrl = uploadResult.secure_url;
+    }
+
+    const newProduct = await prisma.products.create({
+      data: {
+        idProduct,
+        productName,
+        unitPrice: parseFloat(unitPrice),
+        imgProduct: imgProductUrl,
+        desc,
+        size,
+        qtyStock: parseInt(qtyStock),
+      },
+    });
+
     res.status(201).json(newProduct);
   } catch (error) {
     console.error("Error adding product:", error);
@@ -80,7 +136,15 @@ app.post("/addProduct", async (req, res) => {
 app.delete("/deleteProduct/:idProduct", async (req, res) => {
   try {
     const { idProduct } = req.params;
-    await prisma.products.deleteMany({ where: { idProduct } });
+    const product = await prisma.products.findFirst({
+      where: { idProduct },
+    });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    await prisma.products.delete({
+      where: { id: product.id }, // Sử dụng id (ObjectId) để xóa
+    });
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
@@ -89,33 +153,65 @@ app.delete("/deleteProduct/:idProduct", async (req, res) => {
 });
 
 // Cập nhật sản phẩm theo idProduct
-app.put("/updateProduct/:idProduct", async (req, res) => {
-  try {
-    const { idProduct } = req.params;
-    const { productName, unitPrice, imgProduct, desc, size } = req.body;
-    const updatedProduct = await prisma.products.updateMany({
-      where: { idProduct },
-      data: { productName, unitPrice, imgProduct, desc, size },
-    });
+app.put(
+  "/updateProduct/:idProduct",
+  upload.single("imgProduct"), // upload dùng memoryStorage
+  async (req, res) => {
+    try {
+      const { idProduct } = req.params;
+      const { productName, unitPrice, desc, size, qtyStock } = req.body;
 
-    if (updatedProduct.count === 0) {
-      return res.status(404).json({ error: "Product not found" });
+      const product = await prisma.products.findFirst({
+        where: { idProduct },
+      });
+
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      const updateData = {};
+      if (productName) updateData.productName = productName;
+      if (unitPrice) updateData.unitPrice = parseFloat(unitPrice);
+      if (desc) updateData.desc = desc;
+      if (size) updateData.size = size;
+      if (qtyStock) updateData.qtyStock = parseInt(qtyStock);
+
+      if (req.file) {
+        const base64Image = req.file.buffer.toString("base64");
+        const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+          folder: "products",
+          public_id: `product_${idProduct}`,
+          overwrite: true,
+        });
+
+        updateData.imgProduct = uploadResult.secure_url;
+      }
+
+      const updatedProduct = await prisma.products.update({
+        where: { id: product.id }, // sử dụng khóa chính
+        data: updateData,
+      });
+
+      res.json({
+        message: "Product updated successfully",
+        product: updatedProduct,
+      });
+    } catch (error) {
+      console.error("Error updating product:", error);
+      res.status(500).json({ error: "Error updating product" });
     }
-
-    res.json({ message: "Product updated successfully" });
-  } catch (error) {
-    console.error("Error updating product:", error);
-    res.status(500).json({ error: "Error updating product" });
   }
-});
+);
 
+// Cập nhật tồn kho
 app.post("/update-stock", async (req, res) => {
   const { cartItems } = req.body;
 
   try {
     for (const item of cartItems) {
       const { idProduct, qty } = item;
-
       const product = await prisma.products.findFirst({
         where: { idProduct },
       });
@@ -124,8 +220,6 @@ app.post("/update-stock", async (req, res) => {
         console.warn(`Không tìm thấy sản phẩm với idProduct: ${idProduct}`);
         continue;
       }
-
-      console.log("Sản phẩm mua hàng:", product);
 
       await prisma.products.update({
         where: { id: product.id },
@@ -142,18 +236,15 @@ app.post("/update-stock", async (req, res) => {
   }
 });
 
-// catch 404 and forward to error handler
+// Catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
+// Error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get("env") === "development" ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
   res.render("error");
 });
