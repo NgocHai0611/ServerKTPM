@@ -47,31 +47,8 @@ cloudinary.config({
     process.env.CLOUDINARY_API_SECRET || "dRrvRJBEIJux55tAGjOYrJ4n_KY",
 });
 
-// Cấu hình Multer để xử lý file upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Thư mục tạm để lưu file
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png/;
-    const extname = filetypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error("Only images (jpeg, jpg, png) are allowed"));
-  },
-  limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB
-});
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Middleware xác thực token
 const authMiddleware = (req, res, next) => {
@@ -151,7 +128,9 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      pic: pic || "assets/avatar_default/default_avatar.jpg",
+      pic:
+        pic ||
+        "https://res.cloudinary.com/dkmwjkajj/image/upload/v1744086751/rdlye9nsldaprn40ozmd.jpg",
     });
 
     await newUser.save();
@@ -249,7 +228,6 @@ router.put(
       const updateData = {};
       if (name) updateData.name = name;
       if (email) {
-        // Kiểm tra email có trùng với user khác không
         const existingEmail = await User.findOne({
           email,
           _id: { $ne: userId },
@@ -259,16 +237,21 @@ router.put(
         }
         updateData.email = email;
       }
-      if (password) updateData.password = await bcrypt.hash(password, 10);
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
 
-      // Nếu có file ảnh được gửi lên
       if (req.file) {
         try {
-          const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+          const base64 = req.file.buffer.toString("base64");
+          const dataUri = `data:${req.file.mimetype};base64,${base64}`;
+
+          const uploadResult = await cloudinary.uploader.upload(dataUri, {
             folder: "user_avatars",
             public_id: `avatar_${userId}`,
             overwrite: true,
           });
+
           updateData.pic = uploadResult.secure_url;
         } catch (error) {
           console.error("Cloudinary upload error:", error);

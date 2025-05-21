@@ -207,11 +207,18 @@ app.put(
 
 // Cập nhật tồn kho
 app.post("/update-stock", async (req, res) => {
-  const { cartItems } = req.body;
+  const { items } = req.body;
 
   try {
-    for (const item of cartItems) {
-      const { idProduct, qty } = item;
+    for (const item of items) {
+      const idProduct = item.idProduct || item.productID;
+      const { qty } = item;
+
+      if (!idProduct) {
+        console.warn("Thiếu idProduct hoặc productID trong item:", item);
+        continue;
+      }
+
       const product = await prisma.products.findFirst({
         where: { idProduct },
       });

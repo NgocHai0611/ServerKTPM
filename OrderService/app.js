@@ -88,6 +88,8 @@ app.post("/saveOrder", async (req, res) => {
 
 app.post("/updateOrder", async (req, res) => {
   const { orders, status, items, userID, grandTotal } = req.body;
+  console.log("Tổng Tiền Update ", grandTotal);
+  console.log("Item update don hang api ", items);
 
   try {
     // 1. Cập nhật status và grandTotal cho đơn hàng
@@ -112,13 +114,18 @@ app.post("/updateOrder", async (req, res) => {
     const newItems = items.map((item) => ({
       idOrderDetails: undefined,
       orderID: orders.orderID,
-      productID: item.idProduct,
-      productName: item.productName || item.nameProduct || item.name,
+      productID: item.productID || item.id,
+      nameProduct: item.productName || item.nameProduct || item.name,
       qty: item.qty || item.quantity,
       unitPrice: item.unitPrice || item.price,
-      imgProduct: item.imgProduct,
     }));
 
+    //   idOrderDetails       Int   @id @default(autoincrement())
+    // orderID   Int   // Đây là khóa ngoại
+    // qty    Int
+    // unitPrice Float
+    // productID String
+    // nameProduct String
     await prisma.orderDetails.createMany({
       data: newItems,
     });
@@ -127,6 +134,33 @@ app.post("/updateOrder", async (req, res) => {
   } catch (error) {
     console.error("Error updating order:", error);
     res.status(500).json({ error: "Failed to update order." });
+  }
+});
+
+app.delete("/cancelOrder/:orderID", async (req, res) => {
+  const { orderID } = req.params;
+
+  try {
+    // 1. Xóa tất cả các chi tiết đơn hàng liên quan đến orderID
+    await prisma.orderDetails.deleteMany({
+      where: {
+        orderID: parseInt(orderID),
+      },
+    });
+
+    // 2. Xóa chính đơn hàng đó
+    await prisma.orders.delete({
+      where: {
+        orderID: parseInt(orderID),
+      },
+    });
+
+    res.status(200).json({
+      message: "Order and related details have been canceled successfully.",
+    });
+  } catch (error) {
+    console.error("Error canceling order:", error);
+    res.status(500).json({ error: "Failed to cancel order." });
   }
 });
 
@@ -167,38 +201,60 @@ app.get("/revenue/product/yearly", async (req, res) => {
   }
 });
 
-app.get("/spending/byYear/:customerID", async (req, res) => {
+// Doanh Thu Theo Khách Hàng
+app.get("/stats/product/by-customer/yearly/:customerID", async (req, res) => {
   const { customerID } = req.params;
 
+  if (!customerID) {
+    return res.status(400).json({ error: "Missing customerID in URL params" });
+  }
+
   try {
-    const orders = await prisma.orders.findMany({
-      where: { customerID },
-      select: {
-        total: true,
-        orderDate: true,
+    const details = await prisma.orderDetails.findMany({
+      where: {
+        orders: {
+          customerID: customerID, // customerID là chuỗi
+        },
+      },
+      include: {
+        orders: {
+          select: {
+            orderDate: true,
+            customerID: true,
+          },
+        },
       },
     });
 
-    const spendingByYear = {};
+    const statsByYear = {};
 
-    orders.forEach((order) => {
+    details.forEach((item) => {
+      const order = item.orders;
+      if (!order) return;
+
       const year = new Date(order.orderDate).getFullYear();
-      if (!spendingByYear[year]) {
-        spendingByYear[year] = 0;
+      const product = item.productName || item.nameProduct;
+      const quantity = item.qty;
+      const total = quantity * item.unitPrice;
+
+      if (!statsByYear[year]) {
+        statsByYear[year] = {};
       }
-      spendingByYear[year] += order.total;
+
+      if (!statsByYear[year][product]) {
+        statsByYear[year][product] = {
+          totalQuantity: 0,
+          totalAmount: 0,
+        };
+      }
+
+      statsByYear[year][product].totalQuantity += quantity;
+      statsByYear[year][product].totalAmount += total;
     });
 
-    const result = Object.entries(spendingByYear).map(
-      ([year, totalSpending]) => ({
-        year: parseInt(year),
-        totalSpending,
-      })
-    );
-
-    res.status(200).json(result);
+    res.status(200).json({ customerID, statsByYear });
   } catch (error) {
-    console.error("Error calculating spending:", error);
+    console.error("Error getting product stats for customer:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
